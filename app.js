@@ -10,7 +10,7 @@ try {
   const { sendBotMessage } = require('./features/telegram/telegram-bot');
 
   const main = async (chatId, options) => {
-    console.log('ran', format(new Date(), 'hh:m:ss'));
+    console.log('ran', format(new Date(), 'hh:m:ss', { locale: { code: 'az' } }));
     await scrapeApartments();
     let apartments;
 
