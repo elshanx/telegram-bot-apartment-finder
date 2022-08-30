@@ -14,10 +14,6 @@ bot.command('start', ctx => {
   ctx.chat;
 });
 
-bot.command('help', async ctx => {
-  ctx.reply('all the commands are:\n /start\n /check\n /all\n /stop\n /help 🥰');
-});
-
 bot.command('check', ctx => {
   botEvents.emit('check');
   ctx.reply('checking for new apartments✨🥰');
