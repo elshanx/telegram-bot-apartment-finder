@@ -8,7 +8,7 @@ const { scrapeApartments } = require('./helpers/apartments');
 const { sendBotMessage } = require('./features/telegram/telegram-bot');
 
 const main = async (chatId, options) => {
-  console.log('ran', new Date());
+  console.log('ran: ', new Date());
   await scrapeApartments();
   let apartments;
 
