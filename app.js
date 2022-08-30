@@ -1,49 +1,53 @@
-require('./helpers/env');
-require('./db');
+try {
+  require('./helpers/env');
+  require('./db');
 
-const { format } = require('date-fns');
-const { botEvents } = require('./events/bot-events');
+  const { format } = require('date-fns');
+  const { botEvents } = require('./events/bot-events');
 
-const Apartment = require('./models/apartment');
-const { scrapeApartments } = require('./helpers/apartments');
-const { sendBotMessage } = require('./features/telegram/telegram-bot');
+  const Apartment = require('./models/apartment');
+  const { scrapeApartments } = require('./helpers/apartments');
+  const { sendBotMessage } = require('./features/telegram/telegram-bot');
 
-const main = async (chatId, options) => {
-  console.log('ran', format(new Date(), 'hh:m:ss'));
-  await scrapeApartments();
-  let apartments;
+  const main = async (chatId, options) => {
+    console.log('ran', format(new Date(), 'hh:m:ss'));
+    await scrapeApartments();
+    let apartments;
 
-  if (options?.getAll) {
-    apartments = await Apartment.find({ date: { $regex: /bugün/gi } });
-  } else {
-    apartments = await Apartment.find({ sent: false });
-  }
-
-  for await (const apartment of apartments) {
-    if (chatId) {
-      sendBotMessage({ receiver: chatId, apartment });
+    if (options?.getAll) {
+      apartments = await Apartment.find({ date: { $regex: /bugün/gi } });
     } else {
-      sendBotMessage({ apartment });
-      sendBotMessage({ receiver: process.env.messageIdUser2, apartment });
+      apartments = await Apartment.find({ sent: false });
     }
 
-    apartment.sent = true;
-    await apartment.save();
-  }
-};
+    for await (const apartment of apartments) {
+      if (chatId) {
+        sendBotMessage({ receiver: chatId, apartment });
+      } else {
+        sendBotMessage({ apartment });
+        // sendBotMessage({ receiver: process.env.messageIdUser2, apartment });
+      }
 
-(() => {
-  const MINUTES = 5;
-  const INTERVAL = MINUTES * 60 * 1000;
-  main();
+      apartment.sent = true;
+      await apartment.save();
+    }
+  };
 
-  setInterval(() => {
+  (() => {
+    const MINUTES = 5;
+    const INTERVAL = MINUTES * 60 * 1000;
     main();
-  }, INTERVAL);
-})();
 
-botEvents.on('check', main);
-botEvents.on('all', chatId => {
-  const options = { getAll: true };
-  main(chatId, options);
-});
+    setInterval(() => {
+      main();
+    }, INTERVAL);
+  })();
+
+  botEvents.on('check', main);
+  botEvents.on('all', chatId => {
+    const options = { getAll: true };
+    main(chatId, options);
+  });
+} catch (error) {
+  console.log(error);
+}
