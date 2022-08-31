@@ -1,48 +1,85 @@
 require('./helpers/env');
 require('./db');
 
-const { botEvents } = require('./events/bot-events');
+const User = require('./models/user');
+const {
+  scrapeApartments,
+  bulkSendApartments,
+  getUnsentApartments,
+} = require('./helpers/apartments');
+const { telegramBot } = require('./features/telegram/telegram-bot');
+const { logDate } = require('./utils');
 
-const Apartment = require('./models/apartment');
-const { scrapeApartments } = require('./helpers/apartments');
-const { sendBotMessage } = require('./features/telegram/telegram-bot');
+const getUserInfo = (ctx, key) => ctx.chat[key];
 
-const main = async (chatId, options) => {
-  console.log('ran: ', new Date());
-  await scrapeApartments();
-  let apartments;
+const MINUTES = 5;
+const INTERVAL = MINUTES * 60 * 1000;
 
-  if (options?.getAll) {
-    apartments = await Apartment.find({ date: { $regex: /bugün/gi } });
-  } else {
-    apartments = await Apartment.find({ sent: false });
-  }
+telegramBot.command('start', async ctx => {
+  const name = getUserInfo(ctx, 'first_name') || getUserInfo(ctx, 'username');
+  const chatId = getUserInfo(ctx, 'id');
 
-  for await (const apartment of apartments) {
-    if (chatId) {
-      sendBotMessage({ receiver: chatId, apartment });
-    } else {
-      sendBotMessage({ apartment });
-      sendBotMessage({ receiver: process.env.messageIdUser2, apartment });
-    }
+  const doesUserExist = await User.exists({ id: chatId });
+  if (!doesUserExist) await new User({ id: chatId, name }).save();
 
-    apartment.sent = true;
-    await apartment.save();
-  }
-};
+  ctx.reply(`Hope you find your dream apartment ${name}✨🥰`);
 
-(() => {
-  const MINUTES = 5;
-  const INTERVAL = MINUTES * 60 * 1000;
-  main();
-
-  setInterval(() => {
-    main();
-  }, INTERVAL);
-})();
-
-botEvents.on('check', main);
-botEvents.on('all', chatId => {
-  const options = { getAll: true };
-  main(chatId, options);
+  (() => {
+    main(chatId);
+    setInterval(() => main(chatId), INTERVAL);
+  })();
 });
+
+telegramBot.command('check', async ctx => {
+  const chatId = getUserInfo(ctx, 'id');
+  ctx.reply('Checking for new apartments✨🥰');
+
+  const apartments = getUnsentApartments(chatId);
+
+  if (!!apartments.length) {
+    bulkSendApartments(chatId, apartments);
+  } else {
+    telegramBot.telegram.sendMessage(
+      chatId,
+      'There are no new apartments since we last checked. We will notify you once there is a new apartment. 🥰',
+    );
+  }
+});
+
+telegramBot.command('today', async ctx => {
+  const chatId = getUserInfo(ctx, 'id');
+
+  const [start, end] = [new Date(), new Date()];
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
+
+  const filter = { createdAt: { $gte: start, $lte: end } };
+
+  const apartments = getUnsentApartments(chatId, filter);
+
+  if (!!apartments.length) {
+    ctx.reply("Getting today's apartments✨🥰");
+    bulkSendApartments(chatId, apartments);
+  } else {
+    ctx.reply(
+      'There are no new apartments yet. We will notify you once there is a new apartment. 🥰',
+    );
+  }
+});
+
+telegramBot.command('stop', ctx => {
+  ctx.reply('Bye!😭😭');
+  telegramBot.stop();
+});
+
+telegramBot.launch();
+
+process.once('SIGINT', () => telegramBot.stop('SIGINT'));
+process.once('SIGTERM', () => telegramBot.stop('SIGTERM'));
+
+const main = async chatId => {
+  logDate();
+  await scrapeApartments();
+  const apartmentsToSend = await getUnsentApartments(chatId);
+  bulkSendApartments(chatId, apartmentsToSend);
+};

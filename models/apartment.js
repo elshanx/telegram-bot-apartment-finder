@@ -7,7 +7,6 @@ const apartmentSchema = new mongoose.Schema(
     link: { type: String },
     price: { type: Number },
     location: { type: String },
-    sent: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
