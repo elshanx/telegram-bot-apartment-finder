@@ -25,8 +25,11 @@ telegramBot.command('start', async ctx => {
   if (!user) {
     user = await new User({ id: chatId, name }).save();
     ctx.reply(
-      `Hope you find your dream apartment ${name}✨. FYI, you can set /min and /max rent cost. Good luck! 🥰`,
+      `Hope you find your dream apartment, ${name}✨`,
+      //  FYI, you can set /min and /max rent cost. Good luck! 🥰
     );
+  } else {
+    ctx.reply(`Good to see you back, ${name}✨.`);
   }
 
   (() => {
