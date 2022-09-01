@@ -6,37 +6,35 @@ const User = require('../models/user');
 
 const { sendBotMessage } = require('../features/telegram/telegram-bot');
 
-const BASE_URL = process.env.BASE_URL;
-
-const scrapeApartments = async () => {
+const scrapeApartments = async url => {
   const links = [];
   const prices = [];
   const locations = [];
   const dates = [];
   const ids = [];
 
-  const { data } = await axios.get(BASE_URL);
+  const { data } = await axios.get(url);
   const $ = cheerio.load(data);
 
   const itemsList = $('.items_list');
 
-  itemsList.each((_, item) => ({
-    links: $(item)
+  itemsList.each((_, item) => {
+    $(item)
       .find('.items-i .item_link')
-      .each((_, el) => links.push(`https://bina.az${el.attribs.href}`)),
-    prices: $(item)
+      .each((_, el) => links.push(`https://bina.az${el.attribs.href}`));
+    $(item)
       .find('.items-i .price-val')
-      .each((_, el) => prices.push($(el).text())),
-    locations: $(item)
+      .each((_, el) => prices.push($(el).text()));
+    $(item)
       .find('.location')
-      .each((_, el) => locations.push($(el).text().replace('.', '').replace('-', ' '))),
-    dates: $(item)
+      .each((_, el) => locations.push($(el).text().replace('.', '').replace('-', ' ')));
+    $(item)
       .find('.city_when')
-      .each((_, el) => dates.push($(el).text().split(', ')[1])),
-    id: $(item)
+      .each((_, el) => dates.push($(el).text().split(', ')[1]));
+    $(item)
       .find('.items-i .item_link')
-      .each((_, el) => ids.push(el.attribs.href.replace('/items/', ''))),
-  }));
+      .each((_, el) => ids.push(el.attribs.href.replace('/items/', '')));
+  });
 
   for (let i = 0; i < links.length; i++) {
     try {
@@ -69,6 +67,18 @@ const bulkSendApartments = async (chatId, apartments) => {
   }
 };
 
+const getTodaysApartments = async () => {
+  const [start, end] = [new Date(), new Date()];
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
+
+  const apartments = await Apartment.find({ createdAt: { $gte: start, $lte: end } })
+    .select('-__v -_id -updatedAt')
+    .lean();
+
+  return apartments;
+};
+
 const getUnsentApartments = async (id, apartmentFilter) => {
   let allApartments;
   if (apartmentFilter) {
@@ -79,4 +89,4 @@ const getUnsentApartments = async (id, apartmentFilter) => {
   return apartmentsToSend;
 };
 
-module.exports = { scrapeApartments, bulkSendApartments, getUnsentApartments };
+module.exports = { scrapeApartments, bulkSendApartments, getTodaysApartments, getUnsentApartments };

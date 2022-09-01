@@ -6,9 +6,12 @@ const {
   scrapeApartments,
   bulkSendApartments,
   getUnsentApartments,
+  getTodaysApartments,
 } = require('./helpers/apartments');
 const { telegramBot } = require('./features/telegram/telegram-bot');
 const { logDate } = require('./utils');
+
+let url = process.env.BASE_URL;
 
 const getUserInfo = (ctx, key) => ctx.chat[key];
 
@@ -53,9 +56,7 @@ telegramBot.command('today', async ctx => {
   start.setHours(0, 0, 0, 0);
   end.setHours(23, 59, 59, 999);
 
-  const filter = { createdAt: { $gte: start, $lte: end } };
-
-  const apartments = getUnsentApartments(chatId, filter);
+  const apartments = await getTodaysApartments();
 
   if (!!apartments.length) {
     ctx.reply("Getting today's apartments✨🥰");
@@ -77,9 +78,9 @@ telegramBot.launch();
 process.once('SIGINT', () => telegramBot.stop('SIGINT'));
 process.once('SIGTERM', () => telegramBot.stop('SIGTERM'));
 
-const main = async chatId => {
+const main = async (chatId, url) => {
   logDate();
-  await scrapeApartments();
+  await scrapeApartments(url);
   const apartmentsToSend = await getUnsentApartments(chatId);
   bulkSendApartments(chatId, apartmentsToSend);
 };
