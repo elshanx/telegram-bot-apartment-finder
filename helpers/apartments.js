@@ -6,7 +6,12 @@ const User = require('../models/user');
 
 const { sendBotMessage } = require('../features/telegram/telegram-bot');
 
-const scrapeApartments = async url => {
+let BASE_URL = process.env.BASE_URL;
+
+const scrapeApartments = async ({ min = '', max = '', from = '', to = '' }) => {
+  console.log({ min, max, from, to });
+  const url = `${BASE_URL}?area_from=${from}&area_to=${to}&price_from=${min}&price_to=${max}`;
+
   const links = [];
   const prices = [];
   const locations = [];
@@ -43,7 +48,7 @@ const scrapeApartments = async url => {
         await new Apartment({
           date: dates[i],
           link: links[i],
-          price: prices[i],
+          price: String(prices[i]),
           location: locations[i],
           apartmentId: ids[i],
         }).save();
@@ -53,18 +58,21 @@ const scrapeApartments = async url => {
   }
 };
 
-const bulkSendApartments = async (chatId, apartments) => {
-  for await (const apartment of apartments) {
-    sendBotMessage({ receiver: chatId, apartment });
-    try {
-      await User.findOneAndUpdate(
-        { id: chatId },
-        { $addToSet: { viewedApartments: apartment.apartmentId } },
-      );
-    } catch (error) {
-      console.error(error);
-    }
-  }
+const bulkSendMessage = async (chatId, apartments) => {
+  let i = 0;
+
+  const id = setInterval(() => {
+    if (i < apartments.length) {
+      const apartment = apartments[i];
+      sendBotMessage({ receiver: chatId, apartment }).then(async () => {
+        await User.findOneAndUpdate(
+          { id: chatId },
+          { $addToSet: { viewedApartments: apartment.apartmentId } },
+        );
+      });
+      i++;
+    } else clearInterval(id);
+  }, 1000);
 };
 
 const getTodaysApartments = async () => {
@@ -72,21 +80,16 @@ const getTodaysApartments = async () => {
   start.setHours(0, 0, 0, 0);
   end.setHours(23, 59, 59, 999);
 
-  const apartments = await Apartment.find({ createdAt: { $gte: start, $lte: end } })
-    .select('-__v -_id -updatedAt')
-    .lean();
+  const apartments = await Apartment.find({ createdAt: { $gte: start, $lte: end } }).lean();
 
   return apartments;
 };
 
-const getUnsentApartments = async (id, apartmentFilter) => {
-  let allApartments;
-  if (apartmentFilter) {
-    allApartments = await Apartment.find(apartmentFilter).select('-__v -_id -updatedAt').lean();
-  } else allApartments = await Apartment.find().select('-__v -_id -updatedAt').lean();
+const getUnsentApartments = async id => {
+  const allApartments = await Apartment.find().select('-__v -_id -updatedAt').lean();
   const { viewedApartments } = await User.findOne({ id }).select('viewedApartments');
-  const apartmentsToSend = allApartments.filter(a => !viewedApartments.includes(a.apartmentId));
-  return apartmentsToSend;
+  const apartments = allApartments.filter(a => !viewedApartments.includes(a.apartmentId));
+  return apartments;
 };
 
-module.exports = { scrapeApartments, bulkSendApartments, getTodaysApartments, getUnsentApartments };
+module.exports = { scrapeApartments, bulkSendMessage, getTodaysApartments, getUnsentApartments };
