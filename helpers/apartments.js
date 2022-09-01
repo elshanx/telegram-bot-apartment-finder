@@ -9,8 +9,8 @@ const { sendBotMessage } = require('../features/telegram/telegram-bot');
 let BASE_URL = process.env.BASE_URL;
 
 const scrapeApartments = async ({ min = '', max = '', from = '', to = '' }) => {
-  console.log({ min, max, from, to });
-  const url = `${BASE_URL}?area_from=${from}&area_to=${to}&price_from=${min}&price_to=${max}`;
+  // console.log({ min, max, from, to });
+  // const url = `${BASE_URL}?area_from=${from}&area_to=${to}&price_from=${min}&price_to=${max}`;
 
   const links = [];
   const prices = [];
@@ -18,7 +18,7 @@ const scrapeApartments = async ({ min = '', max = '', from = '', to = '' }) => {
   const dates = [];
   const ids = [];
 
-  const { data } = await axios.get(url);
+  const { data } = await axios.get(BASE_URL);
   const $ = cheerio.load(data);
 
   const itemsList = $('.items_list');
