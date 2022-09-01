@@ -1,16 +1,20 @@
-require('./helpers/env');
-require('./db');
+import './helpers/env';
+import './db';
 
-const User = require('./models/user');
-const {
+import { User } from './models/user';
+import {
   scrapeApartments,
   bulkSendApartments,
   getUnsentApartments,
-} = require('./helpers/apartments');
-const { telegramBot } = require('./features/telegram/telegram-bot');
-const { logDate } = require('./utils');
+  getTodaysApartments,
+} from './helpers/apartments';
+import { telegramBot } from './features/telegram/telegram-bot';
+import { logDate } from './utils';
 
-const getUserInfo = (ctx, key) => ctx.chat[key];
+import type { Context } from 'telegraf';
+import type { Update } from 'telegraf/typings/core/types/typegram';
+
+const getUserInfo = (ctx: Context<Update>, key: string) => ctx.chat![key];
 
 const MINUTES = 5;
 const INTERVAL = MINUTES * 60 * 1000;
@@ -36,7 +40,7 @@ telegramBot.command('check', async ctx => {
 
   const apartments = getUnsentApartments(chatId);
 
-  if (!!apartments.length) {
+  if (!!(await apartments).length) {
     bulkSendApartments(chatId, apartments);
   } else {
     telegramBot.telegram.sendMessage(
@@ -48,16 +52,9 @@ telegramBot.command('check', async ctx => {
 
 telegramBot.command('today', async ctx => {
   const chatId = getUserInfo(ctx, 'id');
+  const apartments = getTodaysApartments(chatId);
 
-  const [start, end] = [new Date(), new Date()];
-  start.setHours(0, 0, 0, 0);
-  end.setHours(23, 59, 59, 999);
-
-  const filter = { createdAt: { $gte: start, $lte: end } };
-
-  const apartments = getUnsentApartments(chatId, filter);
-
-  if (!!apartments.length) {
+  if (!!(await apartments).length) {
     ctx.reply("Getting today's apartments✨🥰");
     bulkSendApartments(chatId, apartments);
   } else {
@@ -77,7 +74,7 @@ telegramBot.launch();
 process.once('SIGINT', () => telegramBot.stop('SIGINT'));
 process.once('SIGTERM', () => telegramBot.stop('SIGTERM'));
 
-const main = async chatId => {
+const main = async (chatId: ChatId) => {
   logDate();
   await scrapeApartments();
   const apartmentsToSend = await getUnsentApartments(chatId);

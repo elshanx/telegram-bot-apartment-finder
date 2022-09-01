@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
-const apartmentSchema = new mongoose.Schema(
+const apartmentSchema = new Schema(
   {
     apartmentId: { type: Number },
     date: { type: String },
@@ -11,6 +11,6 @@ const apartmentSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-const Apartment = mongoose.model('Apartment', apartmentSchema);
+const Apartment = model('Apartment', apartmentSchema);
 
-module.exports = Apartment;
+export { Apartment };

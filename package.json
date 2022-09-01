@@ -4,8 +4,9 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start": "cross-env NODE_ENV=prod node app.js",
-    "dev": "cross-env NODE_ENV=dev nodemon app.js"
+    "build": "npx tsc",
+    "start": "cross-env NODE_ENV=prod node dist/app.js",
+    "dev": "cross-env NODE_ENV=dev concurrently \"npx tsc --watch\" \"nodemon -q dist/app.js\""
   },
   "keywords": [],
   "author": "",
@@ -20,5 +21,11 @@
     "mongodb": "^4.9.0",
     "mongoose": "^6.5.3",
     "telegraf": "^4.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.7.14",
+    "concurrently": "^7.3.0",
+    "nodemon": "^2.0.19",
+    "typescript": "^4.8.2"
   }
 }
