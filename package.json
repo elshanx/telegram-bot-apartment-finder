@@ -17,7 +17,7 @@
     "cross-env": "^7.0.3",
     "date-fns": "^2.29.2",
     "dotenv": "^16.0.1",
-    "mongodb": "^4.9.0",
+    "mongodb": "^4.17.0",
     "mongoose": "^6.5.3",
     "telegraf": "^4.9.0"
   }
